@@ -22,7 +22,7 @@ with col1:
 
     #  內層做濾網，外層做篩選：只抓出狀態為 To Do 的小表格 
 
-    todo_df = df[df["status"] == "To Do"] # 把它印在左邊這欄 
+    todo_df = df[df["owner"] == "Python機器人"] # 把它印在左邊這欄 
     st.dataframe(todo_df)
 
 with col2: 
