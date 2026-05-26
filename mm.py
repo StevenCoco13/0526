@@ -1,9 +1,3 @@
-好的！為了讓你的程式碼更具備企業級的生產力標準，我幫你將程式碼進行了結構化的重整。
-
-這次重整的核心目標是「模組化（Modularization）」。我們將資料處理、畫面渲染分開，並加入基本的錯誤阻絕機制，這樣未來如果想加入「點擊按鈕直接切換狀態」或「刪除任務」等進階功能時，程式碼才不會亂成一團。
-
-🛠️ 重整後的 Trello 看板程式碼
-Python
 import streamlit as st
 import pandas as pd
 from streamlit_gsheets import GSheetsConnection
