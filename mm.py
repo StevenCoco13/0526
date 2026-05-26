@@ -110,3 +110,7 @@ with col2:
 with col3:
     st.markdown("### Done (已完成)")
     st.write("這裡未來要放『已完成』的卡片")
+
+with col4:
+    st.markdown("### Done (後備任務)")
+    st.write("這裡未來要放『已完成』的卡片")
