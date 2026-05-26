@@ -113,4 +113,4 @@ with col3:
 
 with col4:
     st.markdown("###  Backlog (後備任務)")
-    st.write("這裡未來要放『???』的卡片")
+    st.write("這裡未來要放『』的卡片")
