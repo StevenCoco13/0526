@@ -1,147 +1,114 @@
+好的！為了讓你的程式碼更具備企業級的生產力標準，我幫你將程式碼進行了結構化的重整。
+
+這次重整的核心目標是「模組化（Modularization）」。我們將資料處理、畫面渲染分開，並加入基本的錯誤阻絕機制，這樣未來如果想加入「點擊按鈕直接切換狀態」或「刪除任務」等進階功能時，程式碼才不會亂成一團。
+
+🛠️ 重整後的 Trello 看板程式碼
+Python
 import streamlit as st
-
 import pandas as pd
-
 from streamlit_gsheets import GSheetsConnection
 
-st.set_page_config(layout="wide")
+# ==========================================
+# ⚙️ 系統核心設定與資料處理
+# ==========================================
+st.set_page_config(layout="wide", page_title="雲端同步 Trello 看板")
 
-st.title(" 階段四終極完成版：GitHub 雲端同步 Trello 看板")
+def init_connection():
+    """建立與 Google Sheets 的安全連接"""
+    return st.connection("gsheets", type=GSheetsConnection)
 
-st.caption("授權標註：edit by 闕河正 | 完整功能版")
+def load_data(conn):
+    """讀取雲端資料並進行標準化清洗"""
+    try:
+        df = conn.read(worksheet="Tasks", ttl=0) # ttl 設為 0 確保即時同步
+        # 強制將欄位名稱轉為去空白的小寫，防止雲端表頭格式隱形出錯
+        df.columns = df.columns.str.strip().str.lower()
+        return df
+    except Exception as e:
+        st.error(f"❌ 雲端資料讀取失敗，請檢查連線或工作表名稱。錯誤訊息: {e}")
+        return pd.DataFrame(columns=["title", "status", "owner"])
 
-conn = st.connection("gsheets", type=GSheetsConnection)
-
-df = conn.read(worksheet="Tasks", ttl="0")
+def render_task_card(title, owner, status):
+    """動態渲染單個 Trello 卡片元件"""
+    with st.container(border=True):
+        if status == "Done":
+            st.write(f"~~**✅ {title}**~~")  # 已完成任務加上刪除線
+        elif status == "In Progress":
+            st.write(f"**⚡ {title}**")
+        else:
+            st.write(f"**📌 {title}**")
+        st.caption(f"👤 負責人: {owner}")
 
 # ==========================================
-
-#  區塊一：上方新增任務輸入表單
-
+# 📊 主程式邏輯開始
 # ==========================================
+conn = init_connection()
+df = load_data(conn)
 
-st.write("###  指派新任務")
+# 標題與頁首標註
+st.title("📋 GitHub 雲端同步 Trello 看板")
+st.caption("授權標註：edit by 闕河正 | 終極重整優化版")
 
+# ------------------------------------------
+# ➕ 區塊一：指派新任務表單
+# ------------------------------------------
+st.write("### ➕ 指派新任務")
 with st.form("task_input_form", clear_on_submit=True):
-
-    c_title, c_status, c_owner = st.columns([2, 1, 1]) # 運用權重比例切分表單
-
+    c_title, c_status, c_owner = st.columns([2, 1, 1])
     with c_title:
-
-        new_title = st.text_input(" 任務名稱", placeholder="輸入任務名稱...")
-
+        new_title = st.text_input("📝 任務名稱", placeholder="輸入任務名稱...")
     with c_status:
-
-        new_status = st.selectbox(" 狀態", ["To Do", "In Progress", "Done"])
-
+        new_status = st.selectbox("🚦 狀態", ["To Do", "In Progress", "Done"])
     with c_owner:
-
-        new_owner = st.text_input(" 負責人", placeholder="誰來負責...")
-
+        new_owner = st.text_input("👤 負責人", placeholder="誰來負責...")
     
-
     submit_btn = st.form_submit_button("確認指派並同步雲端")
 
-if submit_btn and new_title and new_owner:
-
-    new_data = {"title": new_title, "status": new_status, "owner": new_owner}
-
-    new_row = pd.DataFrame([new_data])
-
-    #  核心安全：新版 Python 廢棄 .append()，在雲端必須改用 pd.concat() 進行表格拼接
-
-    updated_df = pd.concat([df, new_row], ignore_index=True)
-
-    conn.update(worksheet="Tasks", data=updated_df)
-
-    st.success(" 資料已跨越限制，成功同步寫入 Google 試算表！")
-
-    st.rerun() # 強制網頁自我重整，重新讀取，讓新卡片亮起來
+# 表單提交邏輯與防呆
+if submit_btn:
+    cleaned_title = new_title.strip()
+    cleaned_owner = new_owner.strip()
+    
+    if cleaned_title and cleaned_owner:
+        # 建立結構對齊的新資料列
+        new_row = pd.DataFrame([{
+            "title": cleaned_title,
+            "status": new_status,
+            "owner": cleaned_owner
+        }])
+        
+        # 安全拼接並上傳雲端
+        updated_df = pd.concat([df, new_row], ignore_index=True)
+        conn.update(worksheet="Tasks", data=updated_df)
+        
+        st.success("🎉 資料已跨越限制，成功同步寫入 Google 試算表！")
+        st.rerun()
+    else:
+        st.error("⚠️ 欄位防呆：任務名稱與負責人不能為空或純空白鍵！")
 
 st.write("---")
 
-# ==========================================
-
-#  區塊二：下方 Trello 三縱欄畫布與卡片渲染
-
-# ==========================================
-
-st.write("###  看板動態狀態監控")
-
+# ------------------------------------------
+# 🗂️ 區塊二：Trello 三縱欄畫布動態監控
+# ------------------------------------------
+st.write("### 🗂️ 看板動態狀態監控")
 trello_col1, trello_col2, trello_col3 = st.columns(3)
 
-#  【第一欄：To Do】
+# 定義看板三欄位的設定參數 (狀態Key, 欄位元件, 標題HTML)
+columns_config = [
+    ("To Do", trello_col1, "<span style='color:red'>🔴 To Do (待辦)</span>"),
+    ("In Progress", trello_col2, "<span style='color:orange'>🟡 In Progress (執行中)</span>"),
+    ("Done", trello_col3, "<span style='color:green'>🟢 Done (已完成)</span>")
+]
 
-with trello_col1:
-
-    st.markdown("### <span style='color:red'> To Do (待辦)</span>", unsafe_allow_html=True)
-
-    todo_list = df[df["status"] == "To Do"] # 階段三學的濾網分流
-
-    
-
-    if not todo_list.empty:
-
-        for idx, row in todo_list.iterrows(): # 階段 3.5 學的迴圈點名
-
-            #  呼叫 border=True，幫每筆點名到的資料揉出一個精緻卡片外框
-
-            with st.container(border=True):
-
-                st.write(f"** {row['title']}**")      # 粗體印出任務名稱
-
-                st.caption(f"負責人: {row['owner']}")   # 灰色小字印出負責人
-
-    else:
-
-        st.info("暫無待辦任務")
-
-#  【第二欄：In Progress】
-
-with trello_col2:
-
-    st.markdown("### <span style='color:orange'> In Progress (執行中)</span>", unsafe_allow_html=True)
-
-    ip_list = df[df["status"] == "In Progress"]
-
-    
-
-    if not ip_list.empty:
-
-        for idx, row in ip_list.iterrows():
-
-            with st.container(border=True):
-
-                st.write(f"** {row['title']}**")
-
-                st.caption(f"負責人: {row['owner']}")
-
-    else:
-
-        st.info("暫無執行中任務")
-
-#  【第三欄：Done】
-
-with trello_col3:
-
-    st.markdown("### <span style='color:green'> Done (已完成)</span>", unsafe_allow_html=True)
-
-    done_list = df[df["status"] == "Done"]
-
-    
-
-    if not done_list.empty:
-
-        for idx, row in done_list.iterrows():
-
-            with st.container(border=True):
-
-                #  貼心小視覺：用 文字 幫已完成的任務加上刪除線，更有完工的體感！
-
-                st.write(f"** {row['title']}**")
-
-                st.caption(f"負責人: {row['owner']}")
-
-    else:
-
-        st.info("暫無已完成任務")
+# 運用迴圈自動化渲染三個縱欄，消滅重複代碼（DRY原則）
+for status_key, col_obj, header_html in columns_config:
+    with col_obj:
+        st.markdown(f"### {header_html}", unsafe_allow_html=True)
+        filtered_list = df[df["status"] == status_key]
+        
+        if not filtered_list.empty:
+            for idx, row in filtered_list.iterrows():
+                render_task_card(row["title"], row["owner"], status_key)
+        else:
+            st.info(f"暫無 {status_key} 任務")
