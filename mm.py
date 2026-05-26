@@ -12,7 +12,7 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 
 df = conn.read(worksheet="Tasks", ttl="2")
 
-todo_df = df[df["status"] == "To Do"]
+todo_df = df[df["owner"] == "Python機器人"]
 
 st.write("---") 
 
