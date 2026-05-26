@@ -10,7 +10,7 @@ st.caption("授權標註：edit by 闕河正")
 
 conn = st.connection("gsheets", type=GSheetsConnection) 
 
-df = conn.read(worksheet="Tasks", ttl="0")
+df = conn.read(worksheet="Tasks", ttl="2")
 
 todo_df = df[df["status"] == "To Do"]
 
