@@ -10,9 +10,9 @@ st.caption("授權標註：edit by 闕河正")
 
 conn = st.connection("gsheets", type=GSheetsConnection) 
 
-df = conn.read(worksheet="Tasks", ttl="2")
+df = conn.read(worksheet="Tasks", ttl="0")
 
-todo_df = df[df["owner"] == "Python機器人"]
+todo_df = df[df["status"] == "To Do"]
 
 st.write("---") 
 
